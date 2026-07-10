@@ -6,8 +6,13 @@
 # noports.env.example at the repo root):
 #
 #   DEVICE_ATSIGN   (required)  atSign identifying this router, e.g. @mydevice
-#   MANAGER_ATSIGN  (required)  atSign(s) allowed to connect; comma-separated
 #   DEVICE_NAME     (required)  device name clients use: sshnp -d <name>
+#   MANAGER_ATSIGN  (*)         atSign(s) allowed to connect; comma-separated
+#   POLICY_ATSIGN   (*)         atSign of a NoPorts Policy Service deciding
+#                               access requests centrally — the right choice
+#                               for large fleets; if both are set, atSigns
+#                               in MANAGER_ATSIGN bypass the policy check
+#                               (*) at least one of the two is required
 #   ROOT_SERVER     (optional)  atDirectory; default root.atsign.org.
 #                               Use proxy:proxy0001.atsign.org:443 when
 #                               management-plane ACLs restrict egress.
@@ -24,7 +29,11 @@ set -euo pipefail
 
 NOPORTS_KEYS_DIR="${NOPORTS_KEYS_DIR:-/atsign/keys}"
 ROOT_SERVER="${ROOT_SERVER:-root.atsign.org}"
-PERMIT_OPEN="${PERMIT_OPEN:-localhost:22}"
+# Without a policy service, default to sshd only; with one, leave
+# PERMIT_OPEN unset so sshnpd defers port restrictions to policy (*:*).
+if [ -z "${PERMIT_OPEN:-}" ] && [ -z "${POLICY_ATSIGN:-}" ]; then
+    PERMIT_OPEN="localhost:22"
+fi
 SSHD_PORT="${SSHD_PORT:-22}"
 
 # sshnpd requires $USER in the environment; docker does not set it.
@@ -32,12 +41,16 @@ USER="${USER:-$(whoami)}"
 export USER
 
 fail=0
-for var in DEVICE_ATSIGN MANAGER_ATSIGN DEVICE_NAME; do
+for var in DEVICE_ATSIGN DEVICE_NAME; do
     if [ -z "${!var:-}" ]; then
         echo "noports: required environment variable $var is not set" >&2
         fail=1
     fi
 done
+if [ -z "${MANAGER_ATSIGN:-}" ] && [ -z "${POLICY_ATSIGN:-}" ]; then
+    echo "noports: at least one of MANAGER_ATSIGN / POLICY_ATSIGN must be set" >&2
+    fail=1
+fi
 if [ "$fail" -ne 0 ]; then
     echo "noports: set it in /var/extensions/noports/noports.env on the" >&2
     echo "noports: routing engine and restart the container:" >&2
@@ -66,15 +79,25 @@ done
 
 echo "noports: atKeys found; starting sshnpd (device ${DEVICE_NAME})"
 
+ACCESS_ARGS=()
+if [ -n "${MANAGER_ATSIGN:-}" ]; then
+    ACCESS_ARGS+=(--managers "$MANAGER_ATSIGN")
+fi
+if [ -n "${POLICY_ATSIGN:-}" ]; then
+    ACCESS_ARGS+=(--policy-manager "$POLICY_ATSIGN")
+fi
+if [ -n "${PERMIT_OPEN:-}" ]; then
+    ACCESS_ARGS+=(--permit-open "$PERMIT_OPEN")
+fi
+
 # Word-splitting of SSHNPD_EXTRA_ARGS is intentional.
 # shellcheck disable=SC2086
 exec /usr/local/bin/sshnpd \
     --atsign "$DEVICE_ATSIGN" \
-    --managers "$MANAGER_ATSIGN" \
+    "${ACCESS_ARGS[@]}" \
     --device "$DEVICE_NAME" \
     --key-file "$KEY_FILE" \
     --root-server "$ROOT_SERVER" \
-    --permit-open "$PERMIT_OPEN" \
     --local-sshd-port "$SSHD_PORT" \
     --storage-path /atsign/storage \
     --verbose \
