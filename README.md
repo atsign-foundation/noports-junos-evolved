@@ -226,6 +226,7 @@ which answers allow/deny based on centrally-managed rules.
 DEVICE_ATSIGN=@mydevice
 POLICY_ATSIGN=@policy_np
 DEVICE_NAME=junos_router_1
+DEVICE_GROUP=core-routers
 ```
 
 At least one of `MANAGER_ATSIGN` / `POLICY_ATSIGN` must be set:
@@ -238,6 +239,10 @@ At least one of `MANAGER_ATSIGN` / `POLICY_ATSIGN` must be set:
 - **both** — atSigns in `MANAGER_ATSIGN` get direct access (policy is not
   consulted for them); everyone else is checked against the policy
   service. Useful as a break-glass list alongside central control.
+
+`DEVICE_GROUP` is sent to the policy service with each request, so rules
+can target groups (e.g. "NOC tier-2 may reach `core-routers` on port 22")
+instead of individual devices.
 
 ## Classic Junos OS: the jump-device pattern
 

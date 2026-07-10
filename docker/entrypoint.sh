@@ -13,6 +13,9 @@
 #                               for large fleets; if both are set, atSigns
 #                               in MANAGER_ATSIGN bypass the policy check
 #                               (*) at least one of the two is required
+#   DEVICE_GROUP    (optional)  device group name, sent to the policy
+#                               service with each request so rules can
+#                               target groups, e.g. core-routers
 #   ROOT_SERVER     (optional)  atDirectory; default root.atsign.org.
 #                               Use proxy:proxy0001.atsign.org:443 when
 #                               management-plane ACLs restrict egress.
@@ -85,6 +88,9 @@ if [ -n "${MANAGER_ATSIGN:-}" ]; then
 fi
 if [ -n "${POLICY_ATSIGN:-}" ]; then
     ACCESS_ARGS+=(--policy-manager "$POLICY_ATSIGN")
+fi
+if [ -n "${DEVICE_GROUP:-}" ]; then
+    ACCESS_ARGS+=(--device-group "$DEVICE_GROUP")
 fi
 if [ -n "${PERMIT_OPEN:-}" ]; then
     ACCESS_ARGS+=(--permit-open "$PERMIT_OPEN")
