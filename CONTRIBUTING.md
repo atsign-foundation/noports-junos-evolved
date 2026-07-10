@@ -32,30 +32,40 @@ configurations are documented
 
 ### Prerequisites
 
-``` sh
-# show how to install the tools needed to work with the code here
-```
+- **Docker** — builds the container image (`make image`), the sideload
+  tarball (`make tar`), and runs the lint tools without local installs
+  (`make lint`)
+- Optional for the Phase 2 YANG scaffold: `pyang` (`pip install pyang`)
+- Optional for on-device testing: a Junos OS Evolved box, or the freely
+  downloadable vJunos-Evolved image under
+  [containerlab](https://containerlab.dev/manual/kinds/vr-vjunosevolved/)
+  (see [clab/vjunos-lab.clab.yml](clab/vjunos-lab.clab.yml) — the node
+  image must be built locally with vrnetlab)
+
+The [Quickstart](QUICKSTART.md) walks the full flow on a device; the
+[README Development section](README.md#development) describes the build
+targets and the image-gated lab topology.
 
 ### GitHub Repository Clone
 
 To prepare your dedicated GitHub repository:
 
-1. Fork in GitHub <https://github.com/atsign-foundation/REPO>
-2. Clone *your forked repository* (e.g., `git clone git@github.com:yourname/REPO`)
+1. Fork in GitHub <https://github.com/atsign-foundation/noports-junos-evolved>
+2. Clone *your forked repository* (e.g., `git clone git@github.com:yourname/noports-junos-evolved`)
 3. Set your remotes as follows:
 
    ```sh
-   cd REPO
-   git remote add upstream git@github.com:atsign-foundation/REPO.git
+   cd noports-junos-evolved
+   git remote add upstream git@github.com:atsign-foundation/noports-junos-evolved.git
    git remote set-url upstream --push DISABLED
    ```
 
    Running `git remote -v` should give something similar to:
 
    ```text
-   origin  git@github.com:yourname/REPO.git (fetch)
-   origin  git@github.com:yourname/REPO.git (push)
-   upstream        git@github.com:atsign-foundation/REPO.git (fetch)
+   origin  git@github.com:yourname/noports-junos-evolved.git (fetch)
+   origin  git@github.com:yourname/noports-junos-evolved.git (push)
+   upstream        git@github.com:atsign-foundation/noports-junos-evolved.git (fetch)
    upstream        DISABLED (push)
    ```
 
@@ -90,60 +100,31 @@ To prepare your dedicated GitHub repository:
    git push
    ```
 
-1. How to run tests:
+1. Check your changes the way CI will:
 
-   ``` sh
-   # explain tests here
+   ```sh
+   make lint            # shellcheck + hadolint (matches the CI lint job)
+   make fetch tar       # image build + tarball must succeed
+   pyang --strict yang/noports.yang            # Phase 2 scaffold lint
+   python3 -m py_compile yang/noports-action.py
    ```
+
+   CI runs the same lint and build, checks the
+   [upstream config schema](upstream/README.md) for drift, and runs a
+   docker smoke test: the container starts with test env vars, the
+   entrypoint must reach the waiting-for-onboarding loop, and the packaged
+   binaries must execute. PRs need all checks green.
 
 1. Open a new Pull Request to the main repository using your `trunk` branch
 
-## atLibrary release process
-
-The Atsign Foundation produces several widgets and libraries that the app developer
-can make use of to develop apps on atProtocol. These libraries are developed in
-Dart & Flutter and published to [pub.dev](https://pub.dev/publishers/atsign.org/packages).
-
-![alt_text](images/image1.png "Version flow")
-
-## Following the changes
-
-The Atsign Foundation publishes libraries and widgets to
-[https://pub.dev/publishers/atsign.org/packages](https://pub.dev/publishers/atsign.org/packages).
-Each of these libraries contains a tab called “Changelog” that shows various
-published versions and a short description of what changes that went in.
-
-![alt_text](images/image2.png "Changelog screenshot")
-
-Also the “Versions” tab shows the versions published in the reverse
-chronological order.
-
-![alt_text](images/image3.png "Versions screenshot")
-
 ## Reporting a bug
 
-The best place to start reporting bugs on the libraries published by
-atProtocol would be the “View/report issues” link available on
-[pub.dev](https://pub.dev/publishers/atsign.org/packages).
-
-![alt_text](images/image4.png "View/report issues highlight")
-
-Once the link is clicked, one should be redirected to GitHub repo where the
-issue can be reported by clicking on the “New issue” button.
-
-![alt_text](images/image5.png "Issues list")
-
-Clicking on the  “New issue” button should take you to the screen to choose
-where the issue is a Bug or an Enhancement.
-
-![alt_text](images/image6.png "Choose Bug report")
-
-Upon clicking on the “Get started” button against the “Bug Report” you should
-be directed to a page with a bug template provided by Atsign. Filling
-out all of the fields in the template gives Atsign a better chance to
-reproduce and fix the bug.
-
-![alt_text](images/image7.png "Filling a Bug report")
+Please open a [GitHub issue](https://github.com/atsign-foundation/noports-junos-evolved/issues/new/choose)
+with the Junos OS Evolved version (`show version`), how the image was
+loaded and run (the exact `docker run` command), the output of
+`docker ps -a` and `docker logs noports`, and whether the box uses
+`set system management-instance`. Filling out all of the fields gives us a
+much better chance to reproduce and fix the bug.
 
 ## Bug fix and delivery process
 
@@ -156,7 +137,7 @@ reproduce and fix the bug.
   and reviewed during subsequent sprint planning meetings where necessary.
 * Once a fix is created we will work with the reporter to ensure that the fix
   is appropriate to their needs, and where possible this should happen prior
-  to release to pub.dev
+  to a release being cut.
 
 ## Closure of the bug
 
@@ -169,4 +150,4 @@ reproduce and fix the bug.
   indicating that they are happy for it to be closed.
 * If the reporter does not respond within 14 calendar days then we must assume
   that they no longer have an interest in fixing the bug and work in progress
-  can be closed out at the team’s discretion.
+  can be closed out at the team's discretion.
