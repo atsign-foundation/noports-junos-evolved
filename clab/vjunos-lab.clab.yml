@@ -1,0 +1,39 @@
+# containerlab topology for developing NoPorts on Junos OS Evolved — no
+# hardware needed, BUT (unlike SR Linux) the node image is gated on a manual
+# build step: Juniper distributes vJunos-Evolved as a freely downloadable
+# qcow2 (no account required), which you package into a container image with
+# vrnetlab. See https://containerlab.dev/manual/kinds/vr-vjunosevolved/
+#
+#   1. Download the vJunos-Evolved qcow2 from the Juniper support portal
+#   2. Build the image:  git clone https://github.com/hellt/vrnetlab &&
+#      cp <qcow2> vrnetlab/juniper/vjunosevolved/ && make -C vrnetlab/juniper/vjunosevolved
+#   3. make fetch tar    # build the NoPorts image + tarball on the host
+#   4. cd clab && sudo containerlab deploy -t vjunos-lab.clab.yml
+#   5. ssh admin@clab-noports-vjunos-vjunos1   (password: admin@123)
+#      then follow QUICKSTART.md "On the router" from `docker load` onwards
+#      (copy build/noports-junos-evolved.tar in with `docker cp` to the VM's
+#      /var/tmp via the vrnetlab ssh, or scp to the node's mgmt address).
+#
+# Boot takes ~15 minutes; watch with: docker logs -f clab-noports-vjunos-vjunos1
+#
+# This topology is NOT run in CI (the image cannot be redistributed); the CI
+# smoke job exercises the container image directly with docker instead.
+name: noports-vjunos
+
+topology:
+  nodes:
+    vjunos1:
+      kind: juniper_vjunosevolved
+      # Build this image locally with vrnetlab (step 2 above); adjust the
+      # tag to the qcow2 version you downloaded.
+      image: vrnetlab/juniper_vjunosevolved:24.2R1.17
+
+    # A plain Linux box to run the sshnp client from, simulating the
+    # operator's machine. Install sshnp + client atKeys here to test the
+    # full end-to-end rendezvous.
+    client:
+      kind: linux
+      image: debian:bookworm-slim
+      cmd: sleep infinity
+
+  links: []

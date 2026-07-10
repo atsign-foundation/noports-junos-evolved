@@ -1,0 +1,81 @@
+// EXPERIMENTAL — Phase 2 scaffolding, not yet wired up or validated on a
+// device. See "Roadmap: native Junos configuration" in the README.
+//
+// Goal: configure NoPorts from the Junos CLI itself (like the SR Linux
+// integration does with its NDK agent) by loading this module as a Junos
+// custom YANG package:
+//
+//   request system yang add package noports module noports.yang \
+//       action-script noports-action.py
+//
+// Junos merges the module into its schema, so `set noports ...` appears in
+// the CLI; the action script (Python 3 since Junos OS Evolved 22.3R1) would
+// render /var/extensions/noports/noports.env from the committed config and
+// bounce the container. Docs:
+// https://www.juniper.net/documentation/us/en/software/junos/netconf/topics/task/netconf-yang-packages-managing.html
+module noports {
+    yang-version 1;
+    namespace "https://atsign.com/yang/junos/noports";
+    prefix noports;
+
+    organization "Atsign";
+    description
+        "NoPorts (sshnpd) configuration for Juniper Junos OS Evolved.
+         Mirrors the environment variables consumed by the container
+         entrypoint (docker/entrypoint.sh).";
+
+    revision 2026-07-09 {
+        description
+            "Initial experimental scaffold: device-atsign, manager-atsigns,
+             device-name, root-server, permit-open.";
+    }
+
+    typedef atsign {
+        type string {
+            pattern '@.+';
+        }
+        description "An atSign, including the leading @";
+    }
+
+    container noports {
+        description "NoPorts daemon: SSH/npt access with no listening ports";
+
+        leaf device-atsign {
+            type atsign;
+            description "The atSign identifying this router (DEVICE_ATSIGN)";
+        }
+
+        leaf-list manager-atsigns {
+            type atsign;
+            description
+                "atSigns with direct access to this router (MANAGER_ATSIGN)";
+        }
+
+        leaf device-name {
+            type string {
+                length "1..36";
+                pattern '[a-zA-Z0-9_]+';
+            }
+            description
+                "Device name clients use: sshnp -d <name> (DEVICE_NAME)";
+        }
+
+        leaf root-server {
+            type string;
+            default "root.atsign.org";
+            description
+                "atDirectory server (ROOT_SERVER). Use the form
+                 proxy:<host>:443 to send all atProtocol traffic to a
+                 reverse proxy on one port when management-plane ACLs
+                 restrict egress.";
+        }
+
+        leaf-list permit-open {
+            type string;
+            description
+                "host:port pairs clients may reach via npt, e.g.
+                 localhost:22 and localhost:830 (NETCONF). Empty means the
+                 entrypoint default, localhost:22. (PERMIT_OPEN)";
+        }
+    }
+}
