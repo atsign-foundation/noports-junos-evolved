@@ -1,0 +1,128 @@
+name: CI
+
+on:
+  push:
+    branches: [trunk]
+  pull_request:
+    branches: [trunk]
+  workflow_dispatch:
+
+permissions: # added using https://github.com/step-security/secure-workflows
+  contents: read
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: step-security/harden-runner@58077d3c7e43986b6b15fba718e8ea69e387dfcc # v2.15.1
+        with:
+          egress-policy: audit
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: shellcheck
+        run: shellcheck docker/entrypoint.sh docker/onboard-noports.sh scripts/fetch-sshnpd.sh
+      - name: hadolint
+        run: docker run --rm -i hadolint/hadolint < docker/Dockerfile
+      - name: Validate YANG module (Phase 2 scaffold)
+        run: |
+          pip install pyang
+          pyang --strict yang/noports.yang
+      - name: Python syntax check (Phase 2 action script scaffold)
+        run: python3 -m py_compile yang/noports-action.py
+
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: step-security/harden-runner@58077d3c7e43986b6b15fba718e8ea69e387dfcc # v2.15.1
+        with:
+          egress-policy: audit
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Fetch pinned sshnpd release binaries
+        run: ./scripts/fetch-sshnpd.sh
+      - name: Check upstream config schema for drift
+        run: |
+          # The entrypoint maps env vars to sshnpd flags; if NoPorts changes
+          # the config surface, this diff turns the (bump) PR red with the
+          # exact change. See upstream/README.md for the update procedure.
+          if ! diff -u upstream/sshnpd.yaml.example build/sshnp/config/sshnpd.yaml; then
+            echo "" >&2
+            echo "sshnpd.yaml schema changed upstream!" >&2
+            echo "Review the diff, update docker/entrypoint.sh and noports.env.example," >&2
+            echo "then refresh the snapshot: cp build/sshnp/config/sshnpd.yaml upstream/sshnpd.yaml.example" >&2
+            exit 1
+          fi
+          echo "upstream config schema unchanged"
+      - name: Build container image
+        run: |
+          docker build --platform linux/amd64 -f docker/Dockerfile \
+            -t noports-junos-evolved:ci .
+      - name: Save image tarball (sideload artifact for /var/extensions)
+        run: |
+          mkdir -p build
+          docker save noports-junos-evolved:ci > build/noports-junos-evolved.tar
+      - uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        with:
+          name: noports-junos-evolved-tar
+          path: build/noports-junos-evolved.tar
+          if-no-files-found: error
+
+  # Run the image the way the router would (env-file config, persistent keys
+  # mount) and assert the entrypoint behaves: env validation passes, the
+  # wait-for-onboarding loop is reached, and the packaged binaries execute.
+  # No atKeys exist in CI, so "waiting for atKeys" is the expected steady
+  # state — proving everything except the atProtocol session itself.
+  #
+  # On-device CI needs vJunos-Evolved (freely downloadable, containerlab
+  # kind juniper_vjunosevolved) whose image cannot be redistributed — see
+  # clab/vjunos-lab.clab.yml for the documented, image-gated lab topology.
+  smoke:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: step-security/harden-runner@58077d3c7e43986b6b15fba718e8ea69e387dfcc # v2.15.1
+        with:
+          egress-policy: audit
+      - uses: actions/download-artifact@70fc10c6e5e1ce46ad2ea6f2b72d43f7d47b13c3 # v8.0.0
+        with:
+          name: noports-junos-evolved-tar
+          path: build
+      - name: Load image
+        run: docker load < build/noports-junos-evolved.tar
+      - name: Entrypoint rejects missing required env
+        run: |
+          if docker run --rm --name noports-badenv noports-junos-evolved:ci; then
+            echo "entrypoint should have failed without required env vars" >&2
+            exit 1
+          fi
+          echo "entrypoint correctly refused to start without config"
+      - name: Entrypoint reaches the waiting-for-onboarding loop
+        run: |
+          mkdir -p keys
+          docker run -d --name noports \
+            -e DEVICE_ATSIGN=@ci_device \
+            -e MANAGER_ATSIGN=@ci_manager \
+            -e DEVICE_NAME=ci_router \
+            -v "$PWD/keys:/atsign/keys" \
+            noports-junos-evolved:ci
+          for i in $(seq 1 12); do
+            if docker logs noports 2>&1 | grep -q "waiting for atKeys"; then
+              docker logs noports
+              exit 0
+            fi
+            sleep 5
+          done
+          echo "entrypoint never reached the waiting-for-atKeys loop" >&2
+          docker logs noports
+          exit 1
+      - name: Packaged binaries execute inside the image
+        run: |
+          for BIN in sshnpd at_activate; do
+            OUT=$(docker exec noports $BIN --help 2>&1 || true)
+            echo "$OUT" | head -3
+            echo "$OUT" | grep -qi "atsign\|usage" || {
+              echo "$BIN did not produce usage output" >&2
+              exit 1
+            }
+          done
+      - name: Cleanup
+        if: always()
+        run: docker rm -f noports || true
