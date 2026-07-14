@@ -34,7 +34,7 @@ module noports {
         type string {
             pattern '@.+';
         }
-        description "An atSign, including the leading @";
+        description "An Atsign, including the leading @";
     }
 
     container noports {
@@ -42,13 +42,13 @@ module noports {
 
         leaf device-atsign {
             type atsign;
-            description "The atSign identifying this router (DEVICE_ATSIGN)";
+            description "The Atsign identifying this router (DEVICE_ATSIGN)";
         }
 
         leaf-list manager-atsigns {
             type atsign;
             description
-                "atSigns with direct access to this router (MANAGER_ATSIGN)";
+                "Atsigns with direct access to this router (MANAGER_ATSIGN)";
         }
 
         leaf device-name {

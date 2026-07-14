@@ -5,12 +5,12 @@
 # `docker run --env-file /var/extensions/noports/noports.env` (see
 # noports.env.example at the repo root):
 #
-#   DEVICE_ATSIGN   (required)  atSign identifying this router, e.g. @mydevice
+#   DEVICE_ATSIGN   (required)  Atsign identifying this router, e.g. @mydevice
 #   DEVICE_NAME     (required)  device name clients use: sshnp -d <name>
-#   MANAGER_ATSIGN  (*)         atSign(s) allowed to connect; comma-separated
-#   POLICY_ATSIGN   (*)         atSign of a NoPorts Policy Service deciding
+#   MANAGER_ATSIGN  (*)         Atsign(s) allowed to connect; comma-separated
+#   POLICY_ATSIGN   (*)         Atsign of a NoPorts Policy Service deciding
 #                               access requests centrally — the right choice
-#                               for large fleets; if both are set, atSigns
+#                               for large fleets; if both are set, Atsigns
 #                               in MANAGER_ATSIGN bypass the policy check
 #                               (*) at least one of the two is required
 #   DEVICE_GROUP    (optional)  device group name, sent to the policy
