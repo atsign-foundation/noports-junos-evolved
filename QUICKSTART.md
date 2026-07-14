@@ -11,9 +11,9 @@ the [jump-device pattern](README.md#classic-junos-os-the-jump-device-pattern)).
 
 ## What you need first
 
-- Two atSigns: one for the router (e.g. `@mydevice`) and one for you as the
+- Two Atsigns: one for the router (e.g. `@mydevice`) and one for you as the
   manager (e.g. `@manager`) — get them at [noports.com](https://noports.com)
-- The manager atSign activated on your own machine, with the NoPorts client
+- The manager Atsign activated on your own machine, with the NoPorts client
   installed ([client install guide](https://docs.noports.com))
 - The image tarball: download `noports-junos-evolved.tar` from the
   [releases page](https://github.com/atsign-foundation/noports-junos-evolved/releases),
@@ -90,7 +90,7 @@ Enrollment cuts scope-limited keys **on the router** — no atKeys file is
 ever copied to it.
 
 ```bash
-# on your machine: generate a one-time passcode for the device atSign
+# on your machine: generate a one-time passcode for the device Atsign
 at_activate otp -a @mydevice
 
 # on the router shell:
@@ -151,7 +151,7 @@ relay the client picks with `-r`, so 443-only egress also needs a relay on
 | No egress / mgmt VRF reachability | From the RE shell: `curl -v https://proxy0001.atsign.org` (prefix with `ip vrf exec mgmt_junos` when using the dedicated management instance). If that fails, it's ACLs/routing, not NoPorts. |
 | DNS resolution fails in the container | Check `/etc/resolv.conf` on the RE; on 24.1R1+ with host networking Juniper documents passing `--dns ::1` to `docker run`. |
 | Onboard script hangs then fails | Enrollment wasn't approved in time — check from your machine with `at_activate list -a @mydevice -s pending`, approve, and re-run. If it never reaches the atServer, test egress (row above) and use proxy mode. |
-| Daemon runs but `sshnp` can't connect | Verify the client uses the same device name (`-d`), the manager atSign is in `MANAGER_ATSIGN`, and (behind strict ACLs) that the relay chosen with `-r` is reachable outbound from the router. |
+| Daemon runs but `sshnp` can't connect | Verify the client uses the same device name (`-d`), the manager Atsign is in `MANAGER_ATSIGN`, and (behind strict ACLs) that the relay chosen with `-r` is reachable outbound from the router. |
 | `npt` to 830 refused | `set system services netconf ssh` committed? `localhost:830` in `PERMIT_OPEN`? (restart the container after changing the env file) |
 | Re-enrolling a device | Delete the key file in `/var/extensions/noports/keys/`, revoke the old enrollment (`at_activate revoke` from your machine), and run the onboard step again. |
 | Out of space loading the image | Containers live in the `/var/extensions` partition (8 GB or 30% of `/var`, whichever is smaller) — `df -h /var/extensions`, prune old images with `docker image prune`. |

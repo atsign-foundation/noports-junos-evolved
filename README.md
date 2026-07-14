@@ -34,7 +34,7 @@ SSH session, step by step.
 Grab `noports-junos-evolved.tar` from the
 [releases page](https://github.com/atsign-foundation/noports-junos-evolved/releases),
 sideload it onto the routing engine, onboard with a one-time passcode. You
-will need NoPorts atSigns for your devices; start at
+will need NoPorts Atsigns for your devices; start at
 [noports.com](https://noports.com).
 
 ### Contributors
@@ -152,7 +152,7 @@ $ su -                                    # container management needs root
 ### Onboard the device with APKAM (no atKeys files copied around)
 
 Enrollment cuts new, scope-limited APKAM keys **on the router**; the full
-atKeys file for the device atSign never leaves the administrator's custody.
+atKeys file for the device Atsign never leaves the administrator's custody.
 
 On the admin machine (any host with an authorized key for `@mydevice`):
 
@@ -212,13 +212,13 @@ path is a separate outbound connection from the router to the relay chosen
 by the client (`-r`), so a 443-only egress policy also needs a relay
 reachable on 443.
 
-## Fleet-scale access control: policy atSigns
+## Fleet-scale access control: policy Atsigns
 
-Listing manager atSigns per router works for a handful of devices, but at
+Listing manager Atsigns per router works for a handful of devices, but at
 fleet scale it means touching every router's env file to grant or revoke
-an operator's access. A **policy atSign** centralizes that decision: the
+an operator's access. A **policy Atsign** centralizes that decision: the
 daemon delegates each incoming request to a
-[NoPorts Policy Service](https://docs.noports.com) running as that atSign,
+[NoPorts Policy Service](https://docs.noports.com) running as that Atsign,
 which answers allow/deny based on centrally-managed rules.
 
 ```bash
@@ -236,7 +236,7 @@ At least one of `MANAGER_ATSIGN` / `POLICY_ATSIGN` must be set:
   change. The entrypoint also stops defaulting `PERMIT_OPEN` to
   `localhost:22` in this mode, so port restrictions defer to policy
   (`*:*`) unless you set `PERMIT_OPEN` explicitly.
-- **both** — atSigns in `MANAGER_ATSIGN` get direct access (policy is not
+- **both** — Atsigns in `MANAGER_ATSIGN` get direct access (policy is not
   consulted for them); everyone else is checked against the policy
   service. Useful as a break-glass list alongside central control.
 
