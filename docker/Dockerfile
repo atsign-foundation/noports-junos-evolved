@@ -25,7 +25,7 @@ RUN apt-get update \
 
 # Stock NoPorts release binaries, staged by scripts/fetch-sshnpd.sh
 # (pinned version: see SSHNPD_VERSION at the repo root)
-COPY build/sshnpd build/at_activate /usr/local/bin/
+COPY build/sshnpd build/at_activate build/srv /usr/local/bin/
 
 COPY docker/entrypoint.sh docker/onboard-noports.sh /usr/local/bin/
 
